@@ -1,0 +1,20 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Add a starter model so Prisma has types to generate
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  completed   Boolean  @default(false)
+  version     Int      @default(1)
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
