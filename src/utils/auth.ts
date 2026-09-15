@@ -1,0 +1,28 @@
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import type { Role } from "@prisma/client";
+
+const JWT_SECRET = process.env.JWT_SECRET || "kaizen-jwt-secret-key-2026";
+const JWT_EXPIRES_IN = "7d";
+
+export interface TokenPayload {
+  userId: string;
+  email: string;
+  role: Role;
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10);
+}
+
+export async function comparePassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash);
+}
+
+export function generateToken(payload: TokenPayload): string {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+}
+
+export function verifyToken(token: string): TokenPayload {
+  return jwt.verify(token, JWT_SECRET) as TokenPayload;
+}

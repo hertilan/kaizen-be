@@ -7,14 +7,281 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Add a starter model so Prisma has types to generate
-model Task {
+enum Role {
+  SUPER_ADMIN
+  MANAGING_DIRECTOR
+  SYSTEM_ADMIN
+  FINANCE_MANAGER
+  ACCOUNTANT
+  OPERATIONS_MANAGER
+  STORE_MANAGER
+  PROCUREMENT_OFFICER
+  SALES_OFFICER
+  HR_ADMIN
+  DEPARTMENT_MANAGER
+  STAFF
+  STOREKEEPER
+  AUDITOR
+  APPROVER
+  VIEWER
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PaymentStatus {
+  PAID
+  PARTIAL
+  UNPAID
+}
+
+enum StockTransactionType {
+  STOCK_IN
+  STOCK_OUT
+  ADJUSTMENT
+  TRANSFER
+}
+
+enum ExpenseCategory {
+  TRANSPORT
+  PROCUREMENT
+  SALARIES
+  UTILITIES
+  OFFICE_EXPENSES
+  MAINTENANCE
+  OPERATIONS
+  OTHER
+}
+
+enum PaymentMethod {
+  CASH
+  MOBILE_MONEY
+  BANK_TRANSFER
+}
+
+enum PaymentDirection {
+  IN
+  OUT
+}
+
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  ON_HOLD
+  PENDING_APPROVAL
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum AlertKind {
+  LOW_STOCK
+  OUT_OF_STOCK
+  ADJUSTMENT
+}
+
+model User {
+  id           String        @id @default(uuid())
+  userId       String        @unique @default(uuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  role         Role          @default(STAFF)
+  active       Boolean       @default(true)
+  avatarUrl    String?
+  assignedTasks Task[]       @relation("AssigneeTasks")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Category {
+  id               String     @id @default(uuid())
+  categoryId       String     @unique @default(uuid())
+  name             String
+  parentCategoryId String?
+  parentCategory   Category?  @relation("CategoryHierarchy", fields: [parentCategoryId], references: [categoryId])
+  subCategories    Category[] @relation("CategoryHierarchy")
+  products         Product[]
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+}
+
+model Product {
+  id            String              @id @default(uuid())
+  productId     String              @unique @default(uuid())
+  code          String              @unique
+  name          String
+  categoryId    String
+  category      Category            @relation(fields: [categoryId], references: [categoryId])
+  unit          String
+  purchasePrice Float
+  sellingPrice  Float
+  stockQty      Int                 @default(0)
+  reorderLevel  Int                 @default(0)
+  status        ProductStatus       @default(ACTIVE)
+  transactions  StockTransaction[]
+  alerts        AlertItem[]
+  purchaseItems PurchaseItem[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+}
+
+model Supplier {
+  id               String     @id @default(uuid())
+  supplierId       String     @unique @default(uuid())
+  name             String
+  contactPerson    String
+  phone            String
+  email            String
+  address          String
+  productsSupplied String[]
+  purchases        Purchase[]
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+}
+
+model Purchase {
+  id            String         @id @default(uuid())
+  purchaseId    String         @unique @default(uuid())
+  purchaseNumber String        @unique
+  supplierId    String
+  supplier      Supplier       @relation(fields: [supplierId], references: [supplierId])
+  date          DateTime       @default(now())
+  paymentStatus PaymentStatus  @default(UNPAID)
+  notes         String?
+  items         PurchaseItem[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model PurchaseItem {
+  id         String   @id @default(uuid())
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [purchaseId], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [productId])
+  quantity   Int
+  unitPrice  Float
+}
+
+model StockTransaction {
+  id            String               @id @default(uuid())
+  transactionId String               @unique @default(uuid())
+  productId     String
+  product       Product              @relation(fields: [productId], references: [productId])
+  type          StockTransactionType
+  quantity      Int
+  date          DateTime             @default(now())
+  reference     String
+  reason        String?
+  createdAt     DateTime             @default(now())
+}
+
+model AlertItem {
+  id        String    @id @default(uuid())
+  alertId   String    @unique @default(uuid())
+  productId String
+  product   Product   @relation(fields: [productId], references: [productId])
+  kind      AlertKind
+  message   String
+  date      DateTime  @default(now())
+  createdAt DateTime  @default(now())
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  invoiceId     String        @unique @default(uuid())
+  invoiceNumber String        @unique
+  customerName  String
+  date          DateTime      @default(now())
+  dueDate       DateTime
+  status        PaymentStatus @default(UNPAID)
+  notes         String?
+  items         InvoiceItem[]
+  tasks         Task[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model InvoiceItem {
   id          String   @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [invoiceId], onDelete: Cascade)
+  productId   String?
+  description String
+  quantity    Int
+  unitPrice   Float
+}
+
+model Expense {
+  id                String          @id @default(uuid())
+  expenseId         String          @unique @default(uuid())
+  category          ExpenseCategory
+  description       String
+  amount            Float
+  date              DateTime        @default(now())
+  paymentMethod     PaymentMethod
+  responsiblePerson String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model Payment {
+  id        String           @id @default(uuid())
+  paymentId String           @unique @default(uuid())
+  direction PaymentDirection
+  method    PaymentMethod
+  amount    Float
+  date      DateTime         @default(now())
+  reference String
+  notes     String?
+  createdAt DateTime         @default(now())
+}
+
+model Task {
+  id          String             @id @default(uuid())
+  taskId      String             @unique @default(uuid())
   title       String
   description String?
-  completed   Boolean  @default(false)
-  version     Int      @default(1)
-  isDeleted   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  status      TaskStatus         @default(NOT_STARTED)
+  priority    TaskPriority       @default(MEDIUM)
+  assigneeId  String
+  assignee    User               @relation("AssigneeTasks", fields: [assigneeId], references: [userId])
+  department  String
+  startDate   DateTime
+  dueDate     DateTime
+  createdDate DateTime           @default(now())
+  invoiceId   String?
+  invoice     Invoice?           @relation(fields: [invoiceId], references: [invoiceId])
+  comments    TaskComment[]
+  history     TaskHistoryEntry[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model TaskComment {
+  id         String   @id @default(uuid())
+  commentId  String   @unique @default(uuid())
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [taskId], onDelete: Cascade)
+  authorName String
+  message    String
+  date       DateTime @default(now())
+}
+
+model TaskHistoryEntry {
+  id        String   @id @default(uuid())
+  entryId   String   @unique @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [taskId], onDelete: Cascade)
+  message   String
+  date      DateTime @default(now())
 }
