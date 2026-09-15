@@ -11,6 +11,7 @@ import stockRoutes from "./routes/stockRoutes.js";
 import invoiceRoutes from "./routes/invoiceRoutes.js";
 import expenseRoutes from "./routes/expenseRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import taskRoutes from "./routes/taskRoutes.js";
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ app.use("/api/stock", stockRoutes);
 app.use("/api/invoices", invoiceRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/tasks", taskRoutes);
 
 app.get("/health", (_req: Request, res: Response) => {
   res.json({ service: "kaizen-be", status: "running" });
