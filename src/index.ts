@@ -12,6 +12,9 @@ import invoiceRoutes from "./routes/invoiceRoutes.js";
 import expenseRoutes from "./routes/expenseRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
+import swaggerUi from "swagger-ui-express";
+import swaggerJsdoc from "swagger-jsdoc";
+import { swaggerOptions } from "./config/swagger.js";
 
 dotenv.config();
 
@@ -20,6 +23,10 @@ const PORT = process.env.PORT || 4000;
 
 app.use(cors());
 app.use(express.json());
+
+// Swagger API Documentation UI mounted at /docs
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
 app.use("/api/auth", authRoutes);
