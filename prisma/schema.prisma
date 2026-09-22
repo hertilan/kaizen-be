@@ -390,3 +390,119 @@ model FixedAsset {
   notes            String?
   createdAt        DateTime @default(now())
 }
+
+// ---------------------------------------------------------------------------
+// SUPPLIER & DISTRIBUTION MODELS
+// ---------------------------------------------------------------------------
+
+model SDShop {
+  id         String   @id @default(uuid())
+  name       String
+  type       String
+  sellerName String
+  location   String
+  createdAt  DateTime @default(now())
+}
+
+model SDCategory {
+  id          String               @id @default(uuid())
+  code        String               @unique
+  name        String
+  description String?
+  template    SDAttributeTemplate?
+  createdAt   DateTime             @default(now())
+}
+
+model SDAttributeTemplate {
+  id           String     @id @default(uuid())
+  categoryId   String     @unique
+  category     SDCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryName String
+  fields       Json
+  createdAt    DateTime   @default(now())
+}
+
+model SDProduct {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  categoryId      String
+  categoryName    String
+  attributeValues Json
+  unit            String
+  purchasePrice   Float
+  sellingPrice    Float
+  shopId          String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SDPurchase {
+  id             String           @id @default(uuid())
+  purchaseNumber String           @unique
+  date           String
+  shopId         String
+  supplierName   String
+  totalQuantity  Int
+  totalAmount    Float
+  notes          String?
+  items          SDPurchaseItem[]
+  createdAt      DateTime         @default(now())
+}
+
+model SDPurchaseItem {
+  id          String     @id @default(uuid())
+  purchaseId  String
+  purchase    SDPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  productId   String
+  productName String
+  quantity    Int
+  unitPrice   Float
+  total       Float
+}
+
+model SDSale {
+  id              String       @id @default(uuid())
+  saleNumber      String       @unique
+  date            String
+  clientId        String
+  clientName      String
+  channel         String
+  shopId          String
+  totalQuantity   Int
+  totalAmount     Float
+  totalCost       Float
+  profitMargin    Float
+  amountPaid      Float
+  amountOwed      Float
+  financeDebtorId String?
+  notes           String?
+  items           SDSaleItem[]
+  createdAt       DateTime     @default(now())
+}
+
+model SDSaleItem {
+  id           String @id @default(uuid())
+  saleId       String
+  sale         SDSale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId    String
+  productName  String
+  quantity     Int
+  unitPrice    Float
+  unitCost     Float
+  total        Float
+  profitMargin Float
+}
+
+model SDClient {
+  id             String   @id @default(uuid())
+  name           String
+  phone          String
+  email          String
+  address        String
+  channel        String
+  shopId         String
+  totalPurchased Float    @default(0)
+  amountOwed     Float    @default(0)
+  createdAt      DateTime @default(now())
+}

@@ -622,6 +622,350 @@ async function main() {
   }
   console.log(`✅ Seeded ${financeTransactions.length} finance transactions`);
 
+  // 17. Seed SD Shops
+  const sdShops = [
+    { id: "shop-gikondo", name: "Gikondo Quincaillerie Shop", type: "RETAIL", sellerName: "Jean-Paul Habimana", location: "Gikondo Commercial Complex" },
+    { id: "shop-nyabugogo", name: "Nyabugogo Retail Branch", type: "RETAIL", sellerName: "Marie-Claire Uwase", location: "Nyabugogo Hardware Terminal" },
+    { id: "shop-kimironko", name: "Kimironko Hardware Store", type: "RETAIL", sellerName: "Emmanuel Nkurunziza", location: "Kimironko Market Zone" },
+    { id: "shop-wholesale-hub", name: "Wholesale Distribution Hub", type: "WHOLESALE", sellerName: "Eric Maniraguha", location: "Gikondo Industrial Yard" },
+  ];
+  for (const s of sdShops) {
+    await prisma.sDShop.upsert({ where: { id: s.id }, update: s, create: s });
+  }
+  console.log(`✅ Seeded ${sdShops.length} SD shops`);
+
+  // 18. Seed SD Categories
+  const sdCategories = [
+    { id: "cat-plumbing", code: "CAT-PLM", name: "Plumbing", description: "PPR, PVC, GI pipes, valves & pressure fittings" },
+    { id: "cat-electrical", code: "CAT-ELE", name: "Electrical", description: "Breakers, LED bulbs, wiring, switches & conduit" },
+    { id: "cat-construction", code: "CAT-CNS", name: "Construction Materials", description: "Cement, steel rebars, paving blocks & aggregate" },
+    { id: "cat-paint", code: "CAT-PNT", name: "Paint", description: "Interior emulsion, weatherguard & primer coats" },
+    { id: "cat-tools", code: "CAT-HTL", name: "Hand Tools", description: "Trowels, spirit levels, hammers, saws & measuring tapes" },
+    { id: "cat-sanitary", code: "CAT-SAN", name: "Sanitary", description: "WC suites, wash basins, mixer taps & shower sets" },
+  ];
+  for (const c of sdCategories) {
+    await prisma.sDCategory.upsert({ where: { id: c.id }, update: c, create: c });
+  }
+  console.log(`✅ Seeded ${sdCategories.length} SD categories`);
+
+  // 19. Seed SD Attribute Templates
+  const sdTemplates = [
+    {
+      id: "tpl-cat-plumbing",
+      categoryId: "cat-plumbing",
+      categoryName: "Plumbing",
+      fields: [
+        { key: "material", label: "Material", type: "DROPDOWN", options: ["PVC", "PPR", "GI"], required: true },
+        { key: "diameter", label: "Diameter / Size", type: "DROPDOWN", options: ["1/2\"", "3/4\"", "1\"", "63mm", "90mm", "110mm"], required: true },
+        { key: "fittingType", label: "Fitting Type", type: "DROPDOWN", options: ["pipe", "elbow", "tee", "valve", "glue", "adapter"], required: true },
+        { key: "pressureClass", label: "Pressure Class", type: "TEXT", required: false },
+        { key: "brand", label: "Brand / Manufacturer", type: "TEXT", required: false },
+      ],
+    },
+    {
+      id: "tpl-cat-electrical",
+      categoryId: "cat-electrical",
+      categoryName: "Electrical",
+      fields: [
+        { key: "brand", label: "Brand", type: "TEXT", required: true },
+        { key: "wattage", label: "Wattage (W)", type: "NUMBER", required: true, unitLabel: "W" },
+        { key: "voltage", label: "Voltage (V)", type: "NUMBER", required: false, unitLabel: "V" },
+        { key: "bulbType", label: "Bulb / Fixture Type", type: "DROPDOWN", options: ["LED", "incandescent", "CFL", "tube"], required: true },
+        { key: "fittingType", label: "Base / Fitting Type", type: "TEXT", required: false },
+        { key: "indoorOutdoor", label: "Environment Rating", type: "DROPDOWN", options: ["Indoor", "Outdoor", "Submersible"], required: false },
+      ],
+    },
+    {
+      id: "tpl-cat-construction",
+      categoryId: "cat-construction",
+      categoryName: "Construction Materials",
+      fields: [
+        { key: "brand", label: "Brand", type: "TEXT", required: false },
+        { key: "unit", label: "Standard Unit", type: "TEXT", required: true },
+        { key: "size", label: "Dimensions / Grade", type: "TEXT", required: false },
+      ],
+    },
+    {
+      id: "tpl-cat-paint",
+      categoryId: "cat-paint",
+      categoryName: "Paint",
+      fields: [
+        { key: "brand", label: "Brand", type: "TEXT", required: true },
+        { key: "finish", label: "Finish Type", type: "DROPDOWN", options: ["Matte", "Gloss", "Silk", "Primer"], required: false },
+        { key: "color", label: "Color Name / Code", type: "TEXT", required: true },
+        { key: "bucketSize", label: "Bucket Volume (Liters)", type: "NUMBER", required: true, unitLabel: "L" },
+      ],
+    },
+    {
+      id: "tpl-cat-tools",
+      categoryId: "cat-tools",
+      categoryName: "Hand Tools",
+      fields: [
+        { key: "brand", label: "Brand", type: "TEXT", required: false },
+        { key: "toolType", label: "Tool Classification", type: "TEXT", required: true },
+        { key: "size", label: "Specification / Size", type: "TEXT", required: false },
+      ],
+    },
+    {
+      id: "tpl-cat-sanitary",
+      categoryId: "cat-sanitary",
+      categoryName: "Sanitary",
+      fields: [
+        { key: "brand", label: "Brand", type: "TEXT", required: false },
+        { key: "material", label: "Sanitaryware Material", type: "TEXT", required: false },
+        { key: "color", label: "Finish / Color", type: "TEXT", required: false },
+      ],
+    },
+  ];
+  for (const t of sdTemplates) {
+    await prisma.sDAttributeTemplate.upsert({ where: { id: t.id }, update: t, create: t });
+  }
+  console.log(`✅ Seeded ${sdTemplates.length} SD attribute templates`);
+
+  // 20. Seed SD Products
+  const sdProducts = [
+    {
+      id: "prod-plm-001",
+      code: "PPR-34P-PN20",
+      name: "PPR Pipe 3/4 inch PN20 (4-Meter)",
+      categoryId: "cat-plumbing",
+      categoryName: "Plumbing",
+      attributeValues: { material: "PPR", diameter: "3/4\"", fittingType: "pipe", pressureClass: "PN20", brand: "Polytank Rwanda" },
+      unit: "Pcs",
+      purchasePrice: 4200,
+      sellingPrice: 6500,
+      shopId: "shop-gikondo",
+    },
+    {
+      id: "prod-plm-002",
+      code: "PPR-1P-PN20",
+      name: "PPR Pipe 1 inch PN20 (4-Meter)",
+      categoryId: "cat-plumbing",
+      categoryName: "Plumbing",
+      attributeValues: { material: "PPR", diameter: "1\"", fittingType: "pipe", pressureClass: "PN20", brand: "Polytank Rwanda" },
+      unit: "Pcs",
+      purchasePrice: 6800,
+      sellingPrice: 9800,
+      shopId: "shop-gikondo",
+    },
+    {
+      id: "prod-plm-003",
+      code: "PVC-90E-CLB",
+      name: "PVC Pressure Elbow 90mm Class B",
+      categoryId: "cat-plumbing",
+      categoryName: "Plumbing",
+      attributeValues: { material: "PVC", diameter: "90mm", fittingType: "elbow", pressureClass: "Class B", brand: "Kigali Plastics" },
+      unit: "Pcs",
+      purchasePrice: 1800,
+      sellingPrice: 2800,
+      shopId: "shop-gikondo",
+    },
+    {
+      id: "prod-plm-004",
+      code: "PVC-110P-CLA",
+      name: "PVC Waste Pipe 110mm Class A (6-Meter)",
+      categoryId: "cat-plumbing",
+      categoryName: "Plumbing",
+      attributeValues: { material: "PVC", diameter: "110mm", fittingType: "pipe", pressureClass: "Class A", brand: "Kigali Plastics" },
+      unit: "Pcs",
+      purchasePrice: 12500,
+      sellingPrice: 17500,
+      shopId: "shop-wholesale-hub",
+    },
+    {
+      id: "prod-ele-001",
+      code: "LED-9W-E27",
+      name: "Philips LED Bulb 9W E27 Daylight",
+      categoryId: "cat-electrical",
+      categoryName: "Electrical",
+      attributeValues: { brand: "Philips", wattage: 9, voltage: 220, bulbType: "LED", fittingType: "E27 Screw", indoorOutdoor: "Indoor" },
+      unit: "Pcs",
+      purchasePrice: 1600,
+      sellingPrice: 2500,
+      shopId: "shop-gikondo",
+    },
+    {
+      id: "prod-ele-002",
+      code: "LED-25W-FL",
+      name: "Osram Heavy Floodlight 25W Outdoor IP65",
+      categoryId: "cat-electrical",
+      categoryName: "Electrical",
+      attributeValues: { brand: "Osram", wattage: 25, voltage: 240, bulbType: "LED", fittingType: "Bracket Mount", indoorOutdoor: "Outdoor" },
+      unit: "Pcs",
+      purchasePrice: 14000,
+      sellingPrice: 21000,
+      shopId: "shop-nyabugogo",
+    },
+    {
+      id: "prod-cns-001",
+      code: "CIM-325-50K",
+      name: "CIMERWA 32.5N Cement 50kg Bag",
+      categoryId: "cat-construction",
+      categoryName: "Construction Materials",
+      attributeValues: { brand: "CIMERWA PLC", unit: "Bag 50kg", size: "32.5N Grade" },
+      unit: "Bag",
+      purchasePrice: 9800,
+      sellingPrice: 11500,
+      shopId: "shop-wholesale-hub",
+    },
+  ];
+  for (const p of sdProducts) {
+    await prisma.sDProduct.upsert({ where: { id: p.id }, update: p, create: p });
+  }
+  console.log(`✅ Seeded ${sdProducts.length} SD products`);
+
+  // 21. Seed SD Purchases
+  const sdPurchases = [
+    {
+      id: "pur-sd-001",
+      purchaseNumber: "RESTOCK-001",
+      date: "2026-09-02",
+      shopId: "shop-gikondo",
+      supplierName: "Polytank Rwanda Distribution",
+      totalQuantity: 180,
+      totalAmount: 964000,
+      notes: "Initial inventory batch delivery for Gikondo shop",
+      items: [
+        { productId: "prod-plm-001", productName: "PPR Pipe 3/4 inch PN20 (4-Meter)", quantity: 100, unitPrice: 4200, total: 420000 },
+        { productId: "prod-plm-002", productName: "PPR Pipe 1 inch PN20 (4-Meter)", quantity: 80, unitPrice: 6800, total: 544000 },
+      ],
+    },
+    {
+      id: "pur-sd-003",
+      purchaseNumber: "RESTOCK-003",
+      date: "2026-09-04",
+      shopId: "shop-gikondo",
+      supplierName: "Kigali Plastics Industry",
+      totalQuantity: 270,
+      totalAmount: 462000,
+      items: [
+        { productId: "prod-plm-003", productName: "PVC Pressure Elbow 90mm Class B", quantity: 150, unitPrice: 1800, total: 270000 },
+        { productId: "prod-ele-001", productName: "Philips LED Bulb 9W E27 Daylight", quantity: 120, unitPrice: 1600, total: 192000 },
+      ],
+    },
+    {
+      id: "pur-sd-005",
+      purchaseNumber: "RESTOCK-005",
+      date: "2026-09-06",
+      shopId: "shop-wholesale-hub",
+      supplierName: "CIMERWA PLC",
+      totalQuantity: 500,
+      totalAmount: 4900000,
+      items: [
+        { productId: "prod-cns-001", productName: "CIMERWA 32.5N Cement 50kg Bag", quantity: 500, unitPrice: 9800, total: 4900000 },
+      ],
+    },
+  ];
+  for (const pur of sdPurchases) {
+    const { items, ...purData } = pur;
+    await prisma.sDPurchase.upsert({
+      where: { id: pur.id },
+      update: purData,
+      create: {
+        ...purData,
+        items: { create: items },
+      },
+    });
+  }
+  console.log(`✅ Seeded ${sdPurchases.length} SD purchases`);
+
+  // 22. Seed SD Clients
+  const sdClients = [
+    {
+      id: "cli-001",
+      name: "Nyabugogo Plumbing Services",
+      phone: "+250 788 610 204",
+      email: "info@nyabugogoplumbing.rw",
+      address: "Nyabugogo Commercial Zone",
+      channel: "RETAIL",
+      shopId: "shop-gikondo",
+      totalPurchased: 162500,
+      amountOwed: 0,
+    },
+    {
+      id: "cli-002",
+      name: "Kanombe Commercial Builders Ltd",
+      phone: "+250 783 119 402",
+      email: "procurement@kanombebuilders.rw",
+      address: "Kanombe Site Office",
+      channel: "WHOLESALE",
+      shopId: "shop-wholesale-hub",
+      totalPurchased: 2300000,
+      amountOwed: 800000,
+    },
+    {
+      id: "cli-003",
+      name: "Gisenyi Water Technologists",
+      phone: "+250 788 301 992",
+      email: "tech@gisenyiwater.rw",
+      address: "Rubavu Highway Depot",
+      channel: "RETAIL",
+      shopId: "shop-gikondo",
+      totalPurchased: 112000,
+      amountOwed: 0,
+    },
+  ];
+  for (const c of sdClients) {
+    await prisma.sDClient.upsert({ where: { id: c.id }, update: c, create: c });
+  }
+  console.log(`✅ Seeded ${sdClients.length} SD clients`);
+
+  // 23. Seed SD Sales
+  const sdSales = [
+    {
+      id: "sale-sd-001",
+      saleNumber: "INV-2026-101",
+      date: "2026-09-10",
+      clientId: "cli-001",
+      clientName: "Nyabugogo Plumbing Services",
+      channel: "RETAIL",
+      shopId: "shop-gikondo",
+      totalQuantity: 35,
+      totalAmount: 190500,
+      totalCost: 123000,
+      profitMargin: 67500,
+      amountPaid: 190500,
+      amountOwed: 0,
+      notes: "Counter sale paid via MTN Mobile Money",
+      items: [
+        { productId: "prod-plm-001", productName: "PPR Pipe 3/4 inch PN20 (4-Meter)", quantity: 25, unitPrice: 6500, unitCost: 4200, total: 162500, profitMargin: 57500 },
+        { productId: "prod-plm-003", productName: "PVC Pressure Elbow 90mm Class B", quantity: 10, unitPrice: 2800, unitCost: 1800, total: 28000, profitMargin: 10000 },
+      ],
+    },
+    {
+      id: "sale-sd-002",
+      saleNumber: "INV-2026-201",
+      date: "2026-09-14",
+      clientId: "cli-002",
+      clientName: "Kanombe Commercial Builders Ltd",
+      channel: "WHOLESALE",
+      shopId: "shop-wholesale-hub",
+      totalQuantity: 200,
+      totalAmount: 2300000,
+      totalCost: 1960000,
+      profitMargin: 340000,
+      amountPaid: 1500000,
+      amountOwed: 800000,
+      financeDebtorId: "deb-002",
+      notes: "Bulk cement purchase — RWF 800,000 balance deferred 14 days",
+      items: [
+        { productId: "prod-cns-001", productName: "CIMERWA 32.5N Cement 50kg Bag", quantity: 200, unitPrice: 11500, unitCost: 9800, total: 2300000, profitMargin: 340000 },
+      ],
+    },
+  ];
+  for (const s of sdSales) {
+    const { items, ...saleData } = s;
+    await prisma.sDSale.upsert({
+      where: { id: s.id },
+      update: saleData,
+      create: {
+        ...saleData,
+        items: { create: items },
+      },
+    });
+  }
+  console.log(`✅ Seeded ${sdSales.length} SD sales`);
+
   console.log("🎉 All operational seed data created successfully!");
 }
 
