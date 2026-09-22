@@ -84,7 +84,7 @@ model User {
   name         String
   email        String        @unique
   passwordHash String
-  role         Role          @default(STAFF)
+  role         Role          @default(ENGINEER)
   active       Boolean       @default(true)
   avatarUrl    String?
   assignedTasks Task[]       @relation("AssigneeTasks")
@@ -274,4 +274,119 @@ model TaskHistoryEntry {
   task      Task     @relation(fields: [taskId], references: [taskId], onDelete: Cascade)
   message   String
   date      DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// FINANCE DEPARTMENT DOMAIN MODELS
+// ---------------------------------------------------------------------------
+
+model FinanceAccount {
+  id            String   @id @default(uuid())
+  name          String
+  code          String   @unique
+  type          String
+  balance       Float    @default(0)
+  currency      String   @default("RWF")
+  isSubLedger   Boolean  @default(false)
+  accountNumber String?
+  bankName      String?
+  description   String?
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+}
+
+model FinanceTransaction {
+  id                   String   @id @default(uuid())
+  date                 String
+  description          String
+  type                 String
+  sourceAccountId      String
+  destinationAccountId String?
+  amount               Float
+  expenditureCodeId    String?
+  reference            String?
+  notes                String?
+  createdAt            DateTime @default(now())
+}
+
+model ExpenditureCode {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  category    String
+  description String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Debtor {
+  id           String                @id @default(uuid())
+  date         String
+  customerName String
+  item         String
+  phoneNumber  String
+  interestRate Float
+  capital      Float
+  interest     Float
+  total        Float
+  dueDate      String
+  amountPaid   Float                 @default(0)
+  status       String                @default("UNPAID")
+  notes        String?
+  payments     DebtorPaymentRecord[]
+  createdAt    DateTime              @default(now())
+}
+
+model DebtorPaymentRecord {
+  id        String   @id @default(uuid())
+  debtorId  String
+  debtor    Debtor   @relation(fields: [debtorId], references: [id], onDelete: Cascade)
+  date      String
+  amount    Float
+  accountId String
+  reference String?
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model Creditor {
+  id           String                  @id @default(uuid())
+  date         String
+  supplierName String
+  item         String
+  detail       String
+  amount       Float
+  totalAmount  Float
+  dueDate      String
+  amountPaid   Float                   @default(0)
+  status       String                  @default("UNPAID")
+  notes        String?
+  payments     CreditorPaymentRecord[]
+  createdAt    DateTime                @default(now())
+}
+
+model CreditorPaymentRecord {
+  id         String   @id @default(uuid())
+  creditorId String
+  creditor   Creditor @relation(fields: [creditorId], references: [id], onDelete: Cascade)
+  date       String
+  amount     Float
+  accountId  String
+  reference  String?
+  notes      String?
+  createdAt  DateTime @default(now())
+}
+
+model FixedAsset {
+  id               String   @id @default(uuid())
+  code             String   @unique
+  assetName        String
+  category         String
+  acquisitionDate  String
+  purchaseValue    Float
+  currentValuation Float
+  location         String
+  condition        String
+  notes            String?
+  createdAt        DateTime @default(now())
 }

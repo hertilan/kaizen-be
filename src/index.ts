@@ -12,6 +12,7 @@ import invoiceRoutes from "./routes/invoiceRoutes.js";
 import expenseRoutes from "./routes/expenseRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
+import financeRoutes from "./routes/financeRoutes.js";
 import swaggerUi from "swagger-ui-express";
 import swaggerJsdoc from "swagger-jsdoc";
 import { swaggerOptions } from "./config/swagger.js";
@@ -40,6 +41,7 @@ app.use("/api/invoices", invoiceRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/tasks", taskRoutes);
+app.use("/api/finance", financeRoutes);
 
 app.get("/health", (_req: Request, res: Response) => {
   res.json({ service: "kaizen-be", status: "running" });

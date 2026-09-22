@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { prisma } from "../prisma.js";
-import { comparePassword, generateToken } from "../utils/auth.js";
+import { comparePassword, hashPassword, generateToken } from "../utils/auth.js";
 import { AuthenticatedRequest } from "../middlewares/auth.js";
 
 export async function login(req: Request, res: Response) {
