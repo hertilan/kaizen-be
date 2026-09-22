@@ -19,21 +19,11 @@ export interface AuthenticatedRequest extends Request {
 
 export const PERMISSION_MATRIX: Record<Role, Record<Module, PermissionLevel>> = {
   SUPER_ADMIN: { INVENTORY: "FULL", FINANCE: "FULL", TASK: "FULL" },
-  MANAGING_DIRECTOR: { INVENTORY: "APPROVE", FINANCE: "APPROVE", TASK: "VIEW" },
-  SYSTEM_ADMIN: { INVENTORY: "FULL_TECHNICAL", FINANCE: "FULL_TECHNICAL", TASK: "FULL_TECHNICAL" },
-  FINANCE_MANAGER: { INVENTORY: "VIEW", FINANCE: "FULL", TASK: "VIEW" },
-  ACCOUNTANT: { INVENTORY: "VIEW", FINANCE: "MANAGE", TASK: "LIMITED" },
-  OPERATIONS_MANAGER: { INVENTORY: "MANAGE", FINANCE: "MANAGE", TASK: "MANAGE" },
-  STORE_MANAGER: { INVENTORY: "MANAGE", FINANCE: "VIEW", TASK: "MANAGE" },
-  PROCUREMENT_OFFICER: { INVENTORY: "MANAGE", FINANCE: "MANAGE", TASK: "LIMITED" },
-  SALES_OFFICER: { INVENTORY: "VIEW", FINANCE: "VIEW", TASK: "LIMITED" },
-  HR_ADMIN: { INVENTORY: "LIMITED", FINANCE: "MANAGE", TASK: "MANAGE" },
-  DEPARTMENT_MANAGER: { INVENTORY: "VIEW", FINANCE: "MANAGE", TASK: "MANAGE" },
-  STAFF: { INVENTORY: "LIMITED", FINANCE: "LIMITED", TASK: "LIMITED" },
-  STOREKEEPER: { INVENTORY: "MANAGE", FINANCE: "LIMITED", TASK: "LIMITED" },
-  AUDITOR: { INVENTORY: "VIEW", FINANCE: "VIEW", TASK: "VIEW" },
-  APPROVER: { INVENTORY: "APPROVE", FINANCE: "APPROVE", TASK: "APPROVE" },
-  VIEWER: { INVENTORY: "REPORTS", FINANCE: "REPORTS", TASK: "REPORTS" },
+  ADMIN: { INVENTORY: "FULL", FINANCE: "FULL", TASK: "FULL" },
+  FINANCE: { INVENTORY: "VIEW", FINANCE: "FULL", TASK: "VIEW" },
+  RETAILER: { INVENTORY: "MANAGE", FINANCE: "LIMITED", TASK: "LIMITED" },
+  WHOLESALE: { INVENTORY: "MANAGE", FINANCE: "LIMITED", TASK: "LIMITED" },
+  ENGINEER: { INVENTORY: "VIEW", FINANCE: "MANAGE", TASK: "FULL" },
 };
 
 const LEVEL_HIERARCHY: Record<PermissionLevel, number> = {
@@ -68,12 +58,13 @@ export function requireAdmin(req: AuthenticatedRequest, res: Response, next: Nex
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  if (req.user.role !== "SUPER_ADMIN" && req.user.role !== "SYSTEM_ADMIN") {
+  if (req.user.role !== "SUPER_ADMIN" && req.user.role !== "ADMIN") {
     return res.status(403).json({ error: "Forbidden: Admin privileges required" });
   }
 
   next();
 }
+
 
 export function requirePermission(module: Module, requiredLevel: PermissionLevel) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

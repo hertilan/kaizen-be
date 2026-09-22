@@ -5,23 +5,13 @@ const prisma = new PrismaClient();
 
 const mockUsers = [
   { userId: "u1", name: "Yvette", email: "yvette@santech.rw", role: "SUPER_ADMIN" as Role, active: true },
-  { userId: "u2", name: "Eric Kaizen", email: "eric@kgst.rw", role: "MANAGING_DIRECTOR" as Role, active: true },
-  { userId: "u3", name: "Eric Niyonzima", email: "niyonzima@kgst.rw", role: "SYSTEM_ADMIN" as Role, active: true },
-  { userId: "u4", name: "Diane Umutoni", email: "diane@kgst.rw", role: "FINANCE_MANAGER" as Role, active: true },
-  { userId: "u5", name: "Chantal Mukamana", email: "chantal@kgst.rw", role: "ACCOUNTANT" as Role, active: true },
-  { userId: "u6", name: "Emmanuel Bizimana", email: "emmanuel@kgst.rw", role: "OPERATIONS_MANAGER" as Role, active: true },
-  { userId: "u7", name: "Aline Uwase", email: "aline@kgst.rw", role: "STORE_MANAGER" as Role, active: true },
-  { userId: "u8", name: "Solange Ingabire", email: "solange@kgst.rw", role: "PROCUREMENT_OFFICER" as Role, active: true },
-  { userId: "u9", name: "Fabrice Nsengimana", email: "fabrice@kgst.rw", role: "SALES_OFFICER" as Role, active: true },
-  { userId: "u10", name: "Claudine Mukashema", email: "claudine@kgst.rw", role: "HR_ADMIN" as Role, active: true },
-  { userId: "u11", name: "Vincent Habineza", email: "vincent@kgst.rw", role: "DEPARTMENT_MANAGER" as Role, active: true },
-  { userId: "u12", name: "Jean Claude Habimana", email: "jc@kgst.rw", role: "STAFF" as Role, active: true },
-  { userId: "u13", name: "Patrick Mugisha", email: "patrick@kgst.rw", role: "STAFF" as Role, active: true },
-  { userId: "u14", name: "Emile Nkurunziza", email: "emile@kgst.rw", role: "STOREKEEPER" as Role, active: true },
-  { userId: "u15", name: "Grace Uwimana", email: "grace@kgst.rw", role: "AUDITOR" as Role, active: true },
-  { userId: "u16", name: "Robert Twagirayezu", email: "robert@kgst.rw", role: "APPROVER" as Role, active: true },
-  { userId: "u17", name: "Beatrice Mutesi", email: "beatrice@kgst.rw", role: "VIEWER" as Role, active: true },
+  { userId: "u2", name: "Eric Kaizen", email: "eric@kgst.rw", role: "ADMIN" as Role, active: true },
+  { userId: "u3", name: "Diane Umutoni", email: "diane@kgst.rw", role: "FINANCE" as Role, active: true },
+  { userId: "u4", name: "Fabrice Nsengimana", email: "fabrice@kgst.rw", role: "RETAILER" as Role, active: true },
+  { userId: "u5", name: "Aline Uwase", email: "aline@kgst.rw", role: "WHOLESALE" as Role, active: true },
+  { userId: "u6", name: "Emmanuel Bizimana", email: "emmanuel@kgst.rw", role: "ENGINEER" as Role, active: true },
 ];
+
 
 async function main() {
   console.log("🌱 Starting comprehensive Kaizen database seed...");

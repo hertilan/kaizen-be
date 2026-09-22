@@ -80,3 +80,40 @@ export async function getMe(req: AuthenticatedRequest, res: Response) {
     return res.status(500).json({ error: "Internal server error" });
   }
 }
+
+export async function updateProfile(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { name, avatarUrl, newPassword } = req.body;
+    const updateData: any = {};
+
+    if (name !== undefined) updateData.name = name.trim();
+    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+    if (newPassword) {
+      updateData.passwordHash = await hashPassword(newPassword);
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { userId: req.user.userId },
+      data: updateData,
+      select: {
+        userId: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+        avatarUrl: true,
+        updatedAt: true,
+      },
+    });
+
+    return res.json(updatedUser);
+  } catch (error) {
+    console.error("updateProfile error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
