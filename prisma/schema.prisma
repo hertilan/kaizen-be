@@ -506,3 +506,44 @@ model SDClient {
   amountOwed     Float    @default(0)
   createdAt      DateTime @default(now())
 }
+
+// ============================================================================
+// ENGINEERING DEPARTMENT MODELS
+// ============================================================================
+
+model EngProject {
+  id            String           @id @default(uuid())
+  projectNumber String           @unique
+  projectName   String
+  clientName    String
+  clientContact String
+  ownerId       String
+  ownerName     String
+  startDate     String
+  endDate       String
+  status        String           @default("QUOTED")
+  quotationRef  String?
+  lpoRef        String?
+  invoiceRef    String?
+  location      String?
+  description   String?
+  transactions  EngTransaction[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model EngTransaction {
+  id                  String     @id @default(uuid())
+  projectId           String
+  project             EngProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date                String
+  description         String
+  type                String
+  expenditureCategory String?
+  amount              Float
+  accountId           String
+  accountName         String
+  isInternalSupply    Boolean    @default(false)
+  notes               String?
+  createdAt           DateTime   @default(now())
+}
