@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { prisma } from "../prisma.js";
 import { comparePassword, hashPassword, generateToken } from "../utils/auth.js";
 import { AuthenticatedRequest } from "../middlewares/auth.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
 
 export async function login(req: Request, res: Response) {
   try {
@@ -91,7 +92,14 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
     const updateData: any = {};
 
     if (name !== undefined) updateData.name = name.trim();
-    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+    if (avatarUrl !== undefined) {
+      if (avatarUrl && typeof avatarUrl === "string" && avatarUrl.startsWith("data:image/")) {
+        const cloudinaryUrl = await uploadToCloudinary(avatarUrl, "kaizen/avatars");
+        updateData.avatarUrl = cloudinaryUrl;
+      } else {
+        updateData.avatarUrl = avatarUrl;
+      }
+    }
     if (newPassword) {
       updateData.passwordHash = await hashPassword(newPassword);
     }

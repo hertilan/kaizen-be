@@ -3,6 +3,7 @@ import { prisma } from "../prisma.js";
 import { hashPassword } from "../utils/auth.js";
 import { Role } from "@prisma/client";
 import { AuthenticatedRequest } from "../middlewares/auth.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
 
 export async function getAllUsers(req: AuthenticatedRequest, res: Response) {
   try {
@@ -93,6 +94,11 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
     const passwordHash = await hashPassword(password);
     const generatedUserId = `u${Date.now()}`;
 
+    let uploadedAvatar = avatarUrl || null;
+    if (avatarUrl && typeof avatarUrl === "string" && avatarUrl.startsWith("data:image/")) {
+      uploadedAvatar = await uploadToCloudinary(avatarUrl, "kaizen/avatars");
+    }
+
     const newUser = await prisma.user.create({
       data: {
         userId: generatedUserId,
@@ -101,7 +107,7 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
         passwordHash,
         role: role as Role,
         active: active ?? true,
-        avatarUrl: avatarUrl || null,
+        avatarUrl: uploadedAvatar,
       },
       select: {
         id: true,
@@ -149,7 +155,14 @@ export async function updateUser(req: AuthenticatedRequest, res: Response) {
     if (email !== undefined) updateData.email = email.toLowerCase().trim();
     if (role !== undefined) updateData.role = role as Role;
     if (active !== undefined) updateData.active = active;
-    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+    if (avatarUrl !== undefined) {
+      if (avatarUrl && typeof avatarUrl === "string" && avatarUrl.startsWith("data:image/")) {
+        const cloudinaryUrl = await uploadToCloudinary(avatarUrl, "kaizen/avatars");
+        updateData.avatarUrl = cloudinaryUrl;
+      } else {
+        updateData.avatarUrl = avatarUrl;
+      }
+    }
     if (password) {
       updateData.passwordHash = await hashPassword(password);
     }
