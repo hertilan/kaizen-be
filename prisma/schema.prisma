@@ -494,17 +494,39 @@ model SDSaleItem {
   profitMargin Float
 }
 
+enum ClientType {
+  PERSON
+  BUSINESS
+}
+
+enum LegalStructure {
+  SOLE_PROPRIETORSHIP
+  LIMITED_LIABILITY
+  PUBLIC_LIMITED
+  NGO
+  OTHER
+}
+
 model SDClient {
-  id             String   @id @default(uuid())
-  name           String
-  phone          String
-  email          String
-  address        String
-  channel        String
-  shopId         String
-  totalPurchased Float    @default(0)
-  amountOwed     Float    @default(0)
-  createdAt      DateTime @default(now())
+  id                  String          @id @default(uuid())
+  clientType          ClientType      @default(PERSON)
+  name                String
+  phone               String
+  email               String
+  address             String
+  channel             String          @default("RETAIL")
+  shopId              String          @default("ALL")
+  tradingName         String?
+  tin                 String?
+  registrationDate    String?
+  legalStructure      LegalStructure?
+  otherLegalStructure String?
+  businessNature      String?
+  contactPerson       String?
+  totalPurchased      Float           @default(0)
+  amountOwed          Float           @default(0)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @default(now()) @updatedAt
 }
 
 // ============================================================================

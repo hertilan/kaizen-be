@@ -411,9 +411,23 @@ export async function createSale(req: AuthenticatedRequest, res: Response) {
 
 export async function getClients(req: AuthenticatedRequest, res: Response) {
   try {
-    const shopId = getScopedShopId(req, req.query.shopId as string);
+    const search = req.query.search ? String(req.query.search).trim() : "";
+    const isGlobal = req.query.global === "true" || req.query.shopId === "ALL";
+    const shopId = isGlobal ? null : getScopedShopId(req, req.query.shopId as string);
+
     const where: any = {};
     if (shopId) where.shopId = shopId;
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { tradingName: { contains: search, mode: "insensitive" } },
+        { tin: { contains: search, mode: "insensitive" } },
+        { phone: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { contactPerson: { contains: search, mode: "insensitive" } },
+      ];
+    }
 
     const clients = await prisma.sDClient.findMany({
       where,
@@ -428,19 +442,43 @@ export async function getClients(req: AuthenticatedRequest, res: Response) {
 
 export async function createClient(req: AuthenticatedRequest, res: Response) {
   try {
-    const { name, phone, email, address, channel, shopId } = req.body;
-    if (!name || !phone || !shopId) {
-      return res.status(400).json({ error: "Client name, phone, and shop ID are required" });
+    const {
+      clientType,
+      name,
+      phone,
+      email,
+      address,
+      channel,
+      shopId,
+      tradingName,
+      tin,
+      registrationDate,
+      legalStructure,
+      otherLegalStructure,
+      businessNature,
+      contactPerson,
+    } = req.body;
+
+    if (!name || !phone) {
+      return res.status(400).json({ error: "Client name and phone number are required" });
     }
 
     const newClient = await prisma.sDClient.create({
       data: {
+        clientType: clientType === "BUSINESS" ? "BUSINESS" : "PERSON",
         name,
         phone,
         email: email || "",
         address: address || "",
         channel: channel || "RETAIL",
-        shopId,
+        shopId: shopId || "ALL",
+        tradingName: tradingName || null,
+        tin: tin || null,
+        registrationDate: registrationDate || null,
+        legalStructure: legalStructure || null,
+        otherLegalStructure: otherLegalStructure || null,
+        businessNature: businessNature || null,
+        contactPerson: contactPerson || null,
         totalPurchased: 0,
         amountOwed: 0,
       },
@@ -449,6 +487,74 @@ export async function createClient(req: AuthenticatedRequest, res: Response) {
     return res.status(201).json(newClient);
   } catch (error) {
     console.error("createClient error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function updateClient(req: AuthenticatedRequest, res: Response) {
+  try {
+    const id = String(req.params.id);
+    const {
+      clientType,
+      name,
+      phone,
+      email,
+      address,
+      channel,
+      shopId,
+      tradingName,
+      tin,
+      registrationDate,
+      legalStructure,
+      otherLegalStructure,
+      businessNature,
+      contactPerson,
+    } = req.body;
+
+    const existing = await prisma.sDClient.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: "Client not found" });
+    }
+
+    const updated = await prisma.sDClient.update({
+      where: { id },
+      data: {
+        clientType: clientType !== undefined ? clientType : existing.clientType,
+        name: name !== undefined ? name : existing.name,
+        phone: phone !== undefined ? phone : existing.phone,
+        email: email !== undefined ? email : existing.email,
+        address: address !== undefined ? address : existing.address,
+        channel: channel !== undefined ? channel : existing.channel,
+        shopId: shopId !== undefined ? shopId : existing.shopId,
+        tradingName: tradingName !== undefined ? tradingName : existing.tradingName,
+        tin: tin !== undefined ? tin : existing.tin,
+        registrationDate: registrationDate !== undefined ? registrationDate : existing.registrationDate,
+        legalStructure: legalStructure !== undefined ? legalStructure : existing.legalStructure,
+        otherLegalStructure: otherLegalStructure !== undefined ? otherLegalStructure : existing.otherLegalStructure,
+        businessNature: businessNature !== undefined ? businessNature : existing.businessNature,
+        contactPerson: contactPerson !== undefined ? contactPerson : existing.contactPerson,
+      },
+    });
+
+    return res.json(updated);
+  } catch (error) {
+    console.error("updateClient error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function deleteClient(req: AuthenticatedRequest, res: Response) {
+  try {
+    const id = String(req.params.id);
+    const existing = await prisma.sDClient.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: "Client not found" });
+    }
+
+    await prisma.sDClient.delete({ where: { id } });
+    return res.json({ message: "Client deleted successfully" });
+  } catch (error) {
+    console.error("deleteClient error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 }
