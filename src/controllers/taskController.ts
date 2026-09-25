@@ -2,6 +2,7 @@ import { Response } from "express";
 import { prisma } from "../prisma.js";
 import { TaskStatus, TaskPriority } from "@prisma/client";
 import { AuthenticatedRequest } from "../middlewares/auth.js";
+import { notificationService } from "../services/notificationService.js";
 
 export async function getAllTasks(req: AuthenticatedRequest, res: Response) {
   try {
@@ -159,6 +160,23 @@ export async function createTask(req: AuthenticatedRequest, res: Response) {
 
       return task;
     });
+
+    // Notify assignee
+    if (newTask.assigneeId) {
+      try {
+        await notificationService.createNotification({
+          title: `New Task Assigned: ${newTask.title}`,
+          message: `You have been assigned task "${newTask.title}" in ${newTask.department}.`,
+          category: "TASK",
+          severity: newTask.priority === "HIGH" || newTask.priority === "URGENT" ? "WARNING" : "INFO",
+          userId: newTask.assigneeId,
+          targetUrl: "/engineering/projects",
+          metadata: { taskId: newTask.taskId },
+        });
+      } catch (notifErr) {
+        console.error("Failed to create task notification:", notifErr);
+      }
+    }
 
     return res.status(201).json(newTask);
   } catch (error) {

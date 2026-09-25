@@ -10,6 +10,13 @@ export async function getNotifications(req: AuthenticatedRequest, res: Response)
     const isReadParam = req.query.isRead as string | undefined;
     const limitParam = req.query.limit as string | undefined;
 
+    // Run auto alert scanner for low stock, overdue tasks & invoices
+    try {
+      await notificationService.generateAutoAlerts();
+    } catch (autoErr) {
+      console.error("Auto alert generation error:", autoErr);
+    }
+
     const isRead = isReadParam !== undefined ? isReadParam === "true" : undefined;
     const limit = limitParam ? parseInt(limitParam, 10) : 50;
 
@@ -31,6 +38,14 @@ export async function getUnreadCount(req: AuthenticatedRequest, res: Response) {
   try {
     const userId = req.user?.userId;
     const role = req.user?.role;
+
+    // Run auto alert scanner
+    try {
+      await notificationService.generateAutoAlerts();
+    } catch (autoErr) {
+      console.error("Auto alert generation error:", autoErr);
+    }
+
     const stats = await notificationService.getUnreadCount(userId, role);
     res.json(stats);
   } catch (error: any) {

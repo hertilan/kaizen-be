@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../prisma.js";
 import { PaymentStatus } from "@prisma/client";
+import { notificationService } from "../services/notificationService.js";
 
 export async function getAllInvoices(req: Request, res: Response) {
   try {
@@ -115,6 +116,20 @@ export async function createInvoice(req: Request, res: Response) {
         items: true,
       },
     });
+
+    // Create finance notification for debtor / new invoice
+    try {
+      await notificationService.createNotification({
+        title: `New Debtor / Invoice #${invoice.invoiceNumber}`,
+        message: `Invoice #${invoice.invoiceNumber} created for ${invoice.customerName} (Due: ${new Date(invoice.dueDate).toLocaleDateString()}).`,
+        category: "FINANCE",
+        severity: invoice.status === "UNPAID" ? "WARNING" : "INFO",
+        targetUrl: "/finance/debtors-creditors",
+        metadata: { invoiceId: invoice.invoiceId },
+      });
+    } catch (notifErr) {
+      console.error("Failed to create invoice notification:", notifErr);
+    }
 
     return res.status(201).json(invoice);
   } catch (error) {

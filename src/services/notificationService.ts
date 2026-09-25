@@ -23,20 +23,23 @@ export class NotificationService {
   /**
    * Helper to derive permitted categories by User Role
    */
-  private getPermittedCategoriesForRole(role?: Role): string[] | null {
-    if (!role || role === Role.SUPER_ADMIN || role === Role.ADMIN) {
-      return null; // All categories allowed
+  private getPermittedCategoriesForRole(role?: Role | string): string[] | null {
+    if (!role) return ["SYSTEM"];
+    const r = String(role).toUpperCase().trim();
+
+    if (r === "SUPER_ADMIN" || r === "ADMIN") {
+      return null; // All categories allowed for admins
     }
-    if (role === Role.FINANCE) {
+    if (r === "FINANCE") {
       return ["FINANCE", "SYSTEM"];
     }
-    if (role === Role.ENGINEER) {
+    if (r === "ENGINEER") {
       return ["TASK", "SYSTEM"];
     }
-    if (role === Role.RETAILER || role === Role.WHOLESALE) {
+    if (r === "RETAILER" || r === "WHOLESALE") {
       return ["STOCK", "SYSTEM"];
     }
-    return null;
+    return ["SYSTEM"];
   }
 
   /**

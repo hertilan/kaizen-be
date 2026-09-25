@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../prisma.js";
 import { AuthenticatedRequest } from "../middlewares/auth.js";
+import { notificationService } from "../services/notificationService.js";
 
 // Static Seed Engineers list (matching system users & engineer roles)
 export const SEED_ENGINEERS = [
@@ -148,6 +149,23 @@ export async function createProject(req: AuthenticatedRequest, res: Response) {
         description,
       },
     });
+
+    // Notify assigned engineer
+    if (newProject.ownerId) {
+      try {
+        await notificationService.createNotification({
+          title: `New Project Assigned: ${newProject.projectName}`,
+          message: `You have been assigned to project "${newProject.projectName}" (${newProject.projectNumber}).`,
+          category: "TASK",
+          severity: "INFO",
+          userId: newProject.ownerId,
+          targetUrl: "/engineering/projects",
+          metadata: { projectId: newProject.id },
+        });
+      } catch (notifErr) {
+        console.error("Failed to create project notification:", notifErr);
+      }
+    }
 
     return res.status(201).json(newProject);
   } catch (error) {
