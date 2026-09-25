@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { exportExcel, exportPdf } from "../controllers/exportController.js";
+import { exportExcel, exportPdf, exportInvoicePdf } from "../controllers/exportController.js";
 import { authenticate } from "../middlewares/auth.js";
 
 const router = Router();
@@ -14,5 +14,6 @@ router.use((req, res, next) => {
 
 router.post("/excel", exportExcel);
 router.post("/pdf", exportPdf);
+router.post("/invoice-pdf", exportInvoicePdf);
 
 export default router;

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { generateExcelBuffer, generatePdfBuffer, ExportColumn } from "../services/exportService.js";
+import { generateExcelBuffer, generatePdfBuffer, generateInvoicePdfBuffer, ExportColumn } from "../services/exportService.js";
 import { prisma } from "../prisma.js";
 
 /**
@@ -176,9 +176,10 @@ export async function exportExcel(req: Request, res: Response) {
   try {
     let { title, filename, columns, rows, filterSummary, entity, queryFilters } = req.body;
 
-    title = title || "Data Export";
+    title = (title || "Data Export").replace(/\.(csv|xlsx|pdf)$/i, "");
     filename = (filename || title || "kaizen_export")
       .toLowerCase()
+      .replace(/\.(csv|xlsx|pdf)$/i, "")
       .replace(/[^a-z0-9_]/g, "_")
       .replace(/_+/g, "_");
 
@@ -225,9 +226,10 @@ export async function exportPdf(req: Request, res: Response) {
   try {
     let { title, filename, columns, rows, filterSummary, entity, queryFilters } = req.body;
 
-    title = title || "Data Export";
+    title = (title || "Data Export").replace(/\.(csv|xlsx|pdf)$/i, "");
     filename = (filename || title || "kaizen_export")
       .toLowerCase()
+      .replace(/\.(csv|xlsx|pdf)$/i, "")
       .replace(/[^a-z0-9_]/g, "_")
       .replace(/_+/g, "_");
 
@@ -261,5 +263,23 @@ export async function exportPdf(req: Request, res: Response) {
   } catch (error) {
     console.error("Error generating PDF export:", error);
     return res.status(500).json({ error: "Failed to generate PDF export" });
+  }
+}
+
+/**
+ * POST /api/export/invoice-pdf
+ */
+export async function exportInvoicePdf(req: Request, res: Response) {
+  try {
+    const payload = req.body;
+    const buffer = await generateInvoicePdfBuffer(payload);
+    const rawNumber = String(payload.docNumber || "invoice").replace(/[^a-z0-9_]/gi, "_");
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="invoice_${rawNumber}.pdf"`);
+    return res.send(buffer);
+  } catch (error) {
+    console.error("Error generating Invoice PDF:", error);
+    return res.status(500).json({ error: "Failed to generate Invoice PDF" });
   }
 }

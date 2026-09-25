@@ -43,13 +43,14 @@ const COLORS = {
  * Generate Excel file buffer using ExcelJS with system colors and formatting
  */
 export async function generateExcelBuffer(options: ExportOptions): Promise<Buffer> {
-  const { title, subtitle, filterSummary, columns, rows } = options;
+  const { title, filterSummary, columns, rows } = options;
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Kaizen SaaS Portal";
   workbook.created = new Date();
 
-  const sheetName = title.replace(/[\\/?*:[\]]/g, "").slice(0, 30) || "Export";
+  const cleanTitle = title.replace(/\.(csv|xlsx|pdf)$/i, "");
+  const sheetName = cleanTitle.replace(/[\\/?*:[\]]/g, "").slice(0, 30) || "Export";
   const worksheet = workbook.addWorksheet(sheetName, {
     views: [{ showGridLines: true }],
   });
@@ -75,7 +76,7 @@ export async function generateExcelBuffer(options: ExportOptions): Promise<Buffe
   headerCell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
 
   // 2. Report Title & Subtitle (Row 2 & 3)
-  const titleRow = worksheet.addRow([title.toUpperCase()]);
+  const titleRow = worksheet.addRow([cleanTitle.toUpperCase()]);
   worksheet.mergeCells(2, 1, 2, totalCols);
   titleRow.height = 24;
   const titleCell = titleRow.getCell(1);
@@ -209,14 +210,14 @@ function getLogoPath(): string | null {
 }
 
 /**
- * Generate PDF document buffer using PDFKit with system styling and embedded Logo
+ * Generate PDF document buffer using PDFKit with clean white header, logo, dynamic row heights, and no blank pages
  */
 export async function generatePdfBuffer(options: ExportOptions): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
-      const { title, subtitle, filterSummary, columns, rows } = options;
+      const { title, filterSummary, columns, rows } = options;
 
-      // Use landscape if > 5 columns, else portrait
+      const cleanTitle = title.replace(/\.(csv|xlsx|pdf)$/i, "");
       const isLandscape = columns.length > 5;
       const pageMargin = 36;
 
@@ -237,77 +238,83 @@ export async function generatePdfBuffer(options: ExportOptions): Promise<Buffer>
 
       const logoPath = getLogoPath();
 
-      // HEADER RENDERING FUNCTION FOR EVERY PAGE
+      // CLEAN HEADER WITHOUT SOLID DARK BLUE BANNER SO LOGO IS CRISP AND CLEARLY VISIBLE
       const renderHeader = (pageNumber: number) => {
-        // Top banner background
-        doc.rect(0, 0, pageWidth, 60).fill(COLORS.primaryPdf);
+        let headerY = pageMargin;
 
-        // Logo
+        // Top Accent Line in Primary Brand Blue
+        doc
+          .moveTo(pageMargin, headerY)
+          .lineTo(pageWidth - pageMargin, headerY)
+          .strokeColor(COLORS.primaryPdf)
+          .lineWidth(3)
+          .stroke();
+
+        headerY += 10;
+
+        // Kaizen Logo on top left (on clean white background)
+        let logoBottomY = headerY;
         if (logoPath) {
           try {
-            doc.image(logoPath, pageMargin, 10, { height: 40 });
+            doc.image(logoPath, pageMargin, headerY, { height: 38 });
+            logoBottomY = headerY + 38;
           } catch (e) {
-            // Fallback text if logo load fails
-            doc.fillColor("#FFFFFF").fontSize(18).font("Helvetica-Bold").text("KAIZEN", pageMargin, 18);
+            doc.fillColor(COLORS.primaryPdf).fontSize(20).font("Helvetica-Bold").text("KAIZEN", pageMargin, headerY);
+            logoBottomY = headerY + 24;
           }
         } else {
-          doc.fillColor("#FFFFFF").fontSize(18).font("Helvetica-Bold").text("KAIZEN", pageMargin, 18);
+          doc.fillColor(COLORS.primaryPdf).fontSize(20).font("Helvetica-Bold").text("KAIZEN", pageMargin, headerY);
+          logoBottomY = headerY + 24;
         }
 
-        // Top right banner title
+        // Clean Report Title on top right
+        const titleText = (cleanTitle || "REPORT").toUpperCase();
         doc
-          .fillColor("#FFFFFF")
+          .fillColor(COLORS.textPdf)
           .fontSize(14)
           .font("Helvetica-Bold")
-          .text(title.toUpperCase(), pageMargin, 20, {
+          .text(titleText, pageMargin, headerY + 4, {
             width: printableWidth,
             align: "right",
           });
 
-        // Subheader metadata block below top banner
-        doc.fillColor(COLORS.textPdf);
-        let startY = 70;
+        headerY = Math.max(logoBottomY, headerY + 28) + 6;
 
-        doc.fontSize(14).font("Helvetica-Bold").text(title, pageMargin, startY);
-        startY += 18;
-
-        doc.fontSize(8).font("Helvetica-Oblique").fillColor(COLORS.textMutedPdf);
+        // Subheader metadata line
+        doc.fontSize(8.5).font("Helvetica-Oblique").fillColor(COLORS.textMutedPdf);
         let metaStr = `Generated: ${new Date().toLocaleString()} | Total Records: ${rows.length}`;
         if (filterSummary) {
           metaStr += ` | Filters: ${filterSummary}`;
         }
-        doc.text(metaStr, pageMargin, startY);
-        startY += 14;
+        doc.text(metaStr, pageMargin, headerY);
+        headerY += 14;
 
-        // Thin divider line
+        // Divider line below header
         doc
-          .moveTo(pageMargin, startY)
-          .lineTo(pageWidth - pageMargin, startY)
+          .moveTo(pageMargin, headerY)
+          .lineTo(pageWidth - pageMargin, headerY)
           .strokeColor(COLORS.borderPdf)
-          .lineWidth(1)
+          .lineWidth(0.75)
           .stroke();
 
-        return startY + 8;
+        return headerY + 10;
       };
 
       let currentY = renderHeader(1);
 
       // TABLE COLUMN WIDTH CALCULATIONS
-      const minColWidth = 50;
+      const minColWidth = 45;
       const colWidths: number[] = columns.map((col) => {
         if (col.width) return col.width;
         return Math.max(minColWidth, Math.floor(printableWidth / columns.length));
       });
 
-      // Normalize column widths to fit exactly printableWidth
       const sumWidths = colWidths.reduce((a, b) => a + b, 0);
       const scaleFactor = printableWidth / sumWidths;
       const finalWidths = colWidths.map((w) => Math.floor(w * scaleFactor));
 
-      const rowHeight = 22;
       const tableHeaderHeight = 24;
 
-      // FUNCTION TO RENDER TABLE HEADERS
       const renderTableHeader = (y: number) => {
         doc.rect(pageMargin, y, printableWidth, tableHeaderHeight).fill(COLORS.primaryPdf);
 
@@ -331,10 +338,38 @@ export async function generatePdfBuffer(options: ExportOptions): Promise<Buffer>
 
       currentY = renderTableHeader(currentY);
 
-      // RENDER TABLE ROWS
+      const formatValue = (rawVal: any): string => {
+        if (rawVal === undefined || rawVal === null) return "";
+        if (typeof rawVal === "number") {
+          return Number.isInteger(rawVal)
+            ? rawVal.toLocaleString()
+            : rawVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        return String(rawVal);
+      };
+
+      // RENDER TABLE ROWS WITH DYNAMIC ROW HEIGHT & TEXT WRAPPING
       rows.forEach((row, rowIndex) => {
-        // Check if row fits on current page (leave 40pt for footer)
-        if (currentY + rowHeight > pageHeight - 50) {
+        // 1. Calculate required height for every cell in this row based on multiline text wrapping
+        let maxTextHeight = 12;
+        columns.forEach((col, idx) => {
+          const w = finalWidths[idx];
+          const textStr = formatValue(row[col.key]);
+          if (textStr) {
+            doc.font("Helvetica").fontSize(8);
+            const h = doc.heightOfString(textStr, {
+              width: w - 8,
+            });
+            if (h > maxTextHeight) {
+              maxTextHeight = h;
+            }
+          }
+        });
+
+        const calculatedRowHeight = Math.max(22, Math.ceil(maxTextHeight + 10));
+
+        // 2. Check if row fits on current page (leave 40pt for page footer)
+        if (currentY + calculatedRowHeight > pageHeight - 45) {
           doc.addPage();
           currentY = renderHeader(doc.bufferedPageRange().count);
           currentY = renderTableHeader(currentY);
@@ -344,52 +379,43 @@ export async function generatePdfBuffer(options: ExportOptions): Promise<Buffer>
         const rowBg = isOdd ? COLORS.zebraOddPdf : COLORS.zebraEvenPdf;
 
         // Background row rect
-        doc.rect(pageMargin, currentY, printableWidth, rowHeight).fill(rowBg);
+        doc.rect(pageMargin, currentY, printableWidth, calculatedRowHeight).fill(rowBg);
 
-        // Row borders
+        // Bottom border line for row
         doc
-          .moveTo(pageMargin, currentY + rowHeight)
-          .lineTo(pageWidth - pageMargin, currentY + rowHeight)
+          .moveTo(pageMargin, currentY + calculatedRowHeight)
+          .lineTo(pageWidth - pageMargin, currentY + calculatedRowHeight)
           .strokeColor(COLORS.borderPdf)
           .lineWidth(0.5)
           .stroke();
 
+        // Write cell contents with lineBreak: true to enable clean wrapping without text intersection
         let currentX = pageMargin;
         columns.forEach((col, idx) => {
           const w = finalWidths[idx];
-          const rawVal = row[col.key];
-          let displayVal = rawVal !== undefined && rawVal !== null ? String(rawVal) : "";
-
-          // Format numbers
-          if (typeof rawVal === "number") {
-            displayVal = Number.isInteger(rawVal)
-              ? rawVal.toLocaleString()
-              : rawVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-          }
+          const displayVal = formatValue(row[col.key]);
 
           doc
             .fillColor(COLORS.textPdf)
             .fontSize(8)
             .font("Helvetica")
-            .text(displayVal, currentX + 4, currentY + 6, {
+            .text(displayVal, currentX + 4, currentY + 5, {
               width: w - 8,
               align: col.align || "left",
-              lineBreak: false,
-              ellipsis: true,
+              lineBreak: true,
             });
 
           currentX += w;
         });
 
-        currentY += rowHeight;
+        currentY += calculatedRowHeight;
       });
 
-      // FOOTER FOR ALL PAGES
+      // FOOTER FOR ALL GENERATED PAGES
       const range = doc.bufferedPageRange();
       for (let i = range.start; i < range.start + range.count; i++) {
         doc.switchToPage(i);
 
-        // Footer top rule
         doc
           .moveTo(pageMargin, pageHeight - 32)
           .lineTo(pageWidth - pageMargin, pageHeight - 32)
@@ -401,7 +427,7 @@ export async function generatePdfBuffer(options: ExportOptions): Promise<Buffer>
           .fillColor(COLORS.textMutedPdf)
           .fontSize(8)
           .font("Helvetica")
-          .text("Kaizen Management System — Confidential & Proprietary Report", pageMargin, pageHeight - 24);
+          .text("Kaizen Management System — Confidential Report", pageMargin, pageHeight - 24);
 
         doc.text(
           `Page ${i + 1} of ${range.count}`,
@@ -409,6 +435,367 @@ export async function generatePdfBuffer(options: ExportOptions): Promise<Buffer>
           pageHeight - 24,
           { width: printableWidth, align: "right" }
         );
+      }
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+export interface InvoiceItemPayload {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
+
+export interface InvoicePdfOptions {
+  docNumber: string;
+  docTitle?: string;
+  date: string;
+  dueDate?: string;
+  from: {
+    name: string;
+    details?: string;
+  };
+  billTo: {
+    name: string;
+    details?: string;
+  };
+  items: InvoiceItemPayload[];
+  totalAmount: number;
+  amountPaid?: number;
+  amountOwed?: number;
+  status?: string;
+  notes?: string;
+}
+
+/**
+ * Generate Invoice PDF Document buffer matching the designer layout specification
+ */
+export async function generateInvoicePdfBuffer(options: InvoicePdfOptions): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      const {
+        docNumber,
+        docTitle = "INVOICE",
+        date,
+        dueDate,
+        from,
+        billTo,
+        items,
+        totalAmount,
+        amountPaid,
+        amountOwed,
+        status,
+        notes,
+      } = options;
+
+      const pageMargin = 40;
+      const doc = new PDFDocument({
+        size: "A4",
+        layout: "portrait",
+        margin: pageMargin,
+        bufferPages: true,
+      });
+
+      const buffers: Buffer[] = [];
+      doc.on("data", (chunk) => buffers.push(chunk));
+      doc.on("end", () => resolve(Buffer.concat(buffers)));
+
+      const pageWidth = doc.page.width;
+      const pageHeight = doc.page.height;
+      const printableWidth = pageWidth - pageMargin * 2;
+
+      let currentY = pageMargin;
+
+      // Top Accent Line
+      doc
+        .moveTo(pageMargin, currentY)
+        .lineTo(pageWidth - pageMargin, currentY)
+        .strokeColor(COLORS.primaryPdf)
+        .lineWidth(3)
+        .stroke();
+
+      currentY += 14;
+
+      // HEADER: Title on Left, Document Number & Date on Right
+      const headerTopY = currentY;
+
+      doc
+        .fillColor(COLORS.primaryPdf)
+        .fontSize(24)
+        .font("Helvetica-Bold")
+        .text(docTitle.toUpperCase(), pageMargin, headerTopY);
+
+      doc
+        .fillColor(COLORS.textMutedPdf)
+        .fontSize(9)
+        .font("Helvetica-Bold")
+        .text("OFFICIAL TAX DOCUMENT", pageMargin, headerTopY + 28);
+
+      doc
+        .fillColor(COLORS.primaryPdf)
+        .fontSize(18)
+        .font("Helvetica-Bold")
+        .text(`#${docNumber}`, pageMargin, headerTopY, {
+          width: printableWidth,
+          align: "right",
+        });
+
+      let rightY = headerTopY + 22;
+      doc
+        .fillColor(COLORS.textMutedPdf)
+        .fontSize(9)
+        .font("Helvetica")
+        .text(`Date: ${date}`, pageMargin, rightY, {
+          width: printableWidth,
+          align: "right",
+        });
+
+      if (dueDate) {
+        rightY += 12;
+        doc.text(`Due Date: ${dueDate}`, pageMargin, rightY, {
+          width: printableWidth,
+          align: "right",
+        });
+      }
+
+      currentY = Math.max(headerTopY + 44, rightY + 16);
+
+      // Divider Line
+      doc
+        .moveTo(pageMargin, currentY)
+        .lineTo(pageWidth - pageMargin, currentY)
+        .strokeColor(COLORS.borderPdf)
+        .lineWidth(0.75)
+        .stroke();
+
+      currentY += 16;
+
+      // TWO-COLUMN ADDRESS GRID (FROM & BILL TO)
+      const colWidth = Math.floor((printableWidth - 30) / 2);
+
+      // Column 1: FROM
+      doc
+        .fillColor(COLORS.primaryPdf)
+        .fontSize(9)
+        .font("Helvetica-Bold")
+        .text("FROM", pageMargin, currentY);
+
+      let fromY = currentY + 12;
+      doc
+        .fillColor(COLORS.textPdf)
+        .fontSize(11)
+        .font("Helvetica-Bold")
+        .text(from.name, pageMargin, fromY, { width: colWidth });
+
+      if (from.details) {
+        fromY += doc.heightOfString(from.name, { width: colWidth }) + 4;
+        doc
+          .fillColor(COLORS.textMutedPdf)
+          .fontSize(8.5)
+          .font("Helvetica")
+          .text(from.details, pageMargin, fromY, { width: colWidth, lineGap: 2 });
+        fromY += doc.heightOfString(from.details, { width: colWidth, lineGap: 2 });
+      }
+
+      // Column 2: BILL TO
+      const col2X = pageMargin + colWidth + 30;
+      doc
+        .fillColor(COLORS.primaryPdf)
+        .fontSize(9)
+        .font("Helvetica-Bold")
+        .text("BILL TO", col2X, currentY);
+
+      let billToY = currentY + 12;
+      doc
+        .fillColor(COLORS.textPdf)
+        .fontSize(11)
+        .font("Helvetica-Bold")
+        .text(billTo.name, col2X, billToY, { width: colWidth });
+
+      if (billTo.details) {
+        billToY += doc.heightOfString(billTo.name, { width: colWidth }) + 4;
+        doc
+          .fillColor(COLORS.textMutedPdf)
+          .fontSize(8.5)
+          .font("Helvetica")
+          .text(billTo.details, col2X, billToY, { width: colWidth, lineGap: 2 });
+        billToY += doc.heightOfString(billTo.details, { width: colWidth, lineGap: 2 });
+      }
+
+      currentY = Math.max(fromY, billToY) + 20;
+
+      // ITEMS TABLE
+      const col1W = Math.floor(printableWidth * 0.45);
+      const col2W = Math.floor(printableWidth * 0.12);
+      const col3W = Math.floor(printableWidth * 0.21);
+      const col4W = printableWidth - col1W - col2W - col3W;
+
+      doc
+        .moveTo(pageMargin, currentY)
+        .lineTo(pageWidth - pageMargin, currentY)
+        .strokeColor(COLORS.primaryPdf)
+        .lineWidth(2)
+        .stroke();
+
+      currentY += 6;
+
+      doc.fillColor(COLORS.primaryPdf).fontSize(9).font("Helvetica-Bold");
+      doc.text("DESCRIPTION", pageMargin + 4, currentY, { width: col1W - 8 });
+      doc.text("QTY", pageMargin + col1W + 4, currentY, { width: col2W - 8, align: "center" });
+      doc.text("RATE (RWF)", pageMargin + col1W + col2W + 4, currentY, { width: col3W - 8, align: "right" });
+      doc.text("AMOUNT (RWF)", pageMargin + col1W + col2W + col3W + 4, currentY, { width: col4W - 8, align: "right" });
+
+      currentY += 16;
+
+      doc
+        .moveTo(pageMargin, currentY)
+        .lineTo(pageWidth - pageMargin, currentY)
+        .strokeColor(COLORS.primaryPdf)
+        .lineWidth(2)
+        .stroke();
+
+      currentY += 4;
+
+      items.forEach((item, idx) => {
+        const itemDesc = item.description;
+        doc.font("Helvetica").fontSize(8.5);
+        const descHeight = doc.heightOfString(itemDesc, { width: col1W - 8 });
+        const rowHeight = Math.max(22, Math.ceil(descHeight + 8));
+
+        if (idx % 2 === 1) {
+          doc.rect(pageMargin, currentY, printableWidth, rowHeight).fill(COLORS.zebraOddPdf);
+        }
+
+        doc
+          .fillColor(COLORS.textPdf)
+          .fontSize(8.5)
+          .font("Helvetica-Bold")
+          .text(itemDesc, pageMargin + 4, currentY + 4, { width: col1W - 8 });
+
+        doc
+          .font("Helvetica")
+          .text(String(item.quantity), pageMargin + col1W + 4, currentY + 4, {
+            width: col2W - 8,
+            align: "center",
+          });
+
+        doc.text(
+          item.unitPrice.toLocaleString(),
+          pageMargin + col1W + col2W + 4,
+          currentY + 4,
+          { width: col3W - 8, align: "right" }
+        );
+
+        doc.font("Helvetica-Bold").text(
+          (item.amount || item.quantity * item.unitPrice).toLocaleString(),
+          pageMargin + col1W + col2W + col3W + 4,
+          currentY + 4,
+          { width: col4W - 8, align: "right" }
+        );
+
+        doc
+          .moveTo(pageMargin, currentY + rowHeight)
+          .lineTo(pageWidth - pageMargin, currentY + rowHeight)
+          .strokeColor(COLORS.borderPdf)
+          .lineWidth(0.5)
+          .stroke();
+
+        currentY += rowHeight;
+      });
+
+      currentY += 14;
+
+      // FULL-WIDTH SOLID TOTAL BANNER IN KAIZEN PRIMARY BLUE
+      const bannerHeight = 36;
+      doc.rect(pageMargin, currentY, printableWidth, bannerHeight).fill(COLORS.primaryPdf);
+
+      doc
+        .fillColor("#FFFFFF")
+        .fontSize(12)
+        .font("Helvetica-Bold")
+        .text("GRAND TOTAL", pageMargin + 14, currentY + 11);
+
+      doc
+        .fillColor("#FFFFFF")
+        .fontSize(15)
+        .font("Helvetica-Bold")
+        .text(`RWF ${totalAmount.toLocaleString()}`, pageMargin, currentY + 10, {
+          width: printableWidth - 14,
+          align: "right",
+        });
+
+      currentY += bannerHeight + 16;
+
+      if (amountPaid !== undefined || amountOwed !== undefined || status) {
+        doc.fontSize(8.5).font("Helvetica");
+
+        if (status) {
+          doc.fillColor(COLORS.textMutedPdf).text(`Payment Status: ${status}`, pageMargin, currentY);
+        }
+
+        let summaryY = currentY;
+        if (amountPaid !== undefined) {
+          doc.fillColor(COLORS.textPdf).text(
+            `Amount Paid: RWF ${amountPaid.toLocaleString()}`,
+            pageMargin,
+            summaryY,
+            { width: printableWidth, align: "right" }
+          );
+          summaryY += 12;
+        }
+
+        if (amountOwed !== undefined && amountOwed > 0) {
+          doc.fillColor("#EF4444").font("Helvetica-Bold").text(
+            `Balance Due: RWF ${amountOwed.toLocaleString()}`,
+            pageMargin,
+            summaryY,
+            { width: printableWidth, align: "right" }
+          );
+          summaryY += 12;
+        }
+
+        currentY = Math.max(currentY + 24, summaryY + 10);
+      }
+
+      if (notes) {
+        doc
+          .fillColor(COLORS.textMutedPdf)
+          .fontSize(8.5)
+          .font("Helvetica-Oblique")
+          .text(`Notes: ${notes}`, pageMargin, currentY, { width: printableWidth });
+      }
+
+      // FOOTER
+      const range = doc.bufferedPageRange();
+      for (let i = range.start; i < range.start + range.count; i++) {
+        doc.switchToPage(i);
+
+        doc
+          .moveTo(pageMargin, pageHeight - 32)
+          .lineTo(pageWidth - pageMargin, pageHeight - 32)
+          .strokeColor(COLORS.borderPdf)
+          .lineWidth(0.5)
+          .stroke();
+
+        doc
+          .fillColor(COLORS.textMutedPdf)
+          .fontSize(8)
+          .font("Helvetica")
+          .text(
+            "Thank you for your business — Kaizen General Services & Trading Ltd",
+            pageMargin,
+            pageHeight - 24
+          );
+
+        doc.text(`Page ${i + 1} of ${range.count}`, pageMargin, pageHeight - 24, {
+          width: printableWidth,
+          align: "right",
+        });
       }
 
       doc.end();
