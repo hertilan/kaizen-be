@@ -15,6 +15,7 @@ import taskRoutes from "./routes/taskRoutes.js";
 import financeRoutes from "./routes/financeRoutes.js";
 import sdRoutes from "./routes/sdRoutes.js";
 import engRoutes from "./routes/engRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 import swaggerUi from "swagger-ui-express";
 import swaggerJsdoc from "swagger-jsdoc";
 import { swaggerOptions } from "./config/swagger.js";
@@ -46,6 +47,7 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/finance", financeRoutes);
 app.use("/api/supplier-distribution", sdRoutes);
 app.use("/api/engineering", engRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.get("/health", (_req: Request, res: Response) => {
   res.json({ service: "kaizen-be", status: "running" });
